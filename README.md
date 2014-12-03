@@ -1,4 +1,4 @@
 2014-mco152-esendrovitz
 =======================
 
-Computer Methodology
+This is the repo that I will store my COmputer Methodology code.
