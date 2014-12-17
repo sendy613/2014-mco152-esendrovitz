@@ -10,9 +10,9 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
-public class WeatherFrame extends JFrame{
+public class WeatherGUI extends JFrame{
 
-	public WeatherFrame(){
+	public WeatherGUI(){
 		setSize(800,600);
 		setTitle("Current Weather");
 		//this is only if your application has one window
@@ -49,7 +49,7 @@ public class WeatherFrame extends JFrame{
 		container.add(new JLabel("Thanks for your silence!"), BorderLayout.WEST);
 	}
 	public static void main (String args[]){
-		WeatherFrame frame = new WeatherFrame();
+		WeatherGUI frame = new WeatherGUI();
 		frame.setVisible(true);
 		
 	}
