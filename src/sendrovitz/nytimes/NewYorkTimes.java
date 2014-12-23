@@ -24,6 +24,10 @@ import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+
+
+import org.apache.commons.io.IOUtils;
+
 import com.google.gson.Gson;
 
 public class NewYorkTimes extends JFrame {
@@ -40,14 +44,15 @@ public class NewYorkTimes extends JFrame {
 						+ date + "&sort=newest&page=0&api-key=792b41615caf3e33b251d4ee53a37b92%3A11%3A70519033");
 		URLConnection connection = url.openConnection();
 		InputStream in = connection.getInputStream();
-		StringBuilder builder = new StringBuilder();
-		byte[] b = new byte[4096];
-		int n = -1;
-		while ((n = in.read(b)) != -1) {
-			builder.append(new String(b, 0, n)); // creates a new string from
-													// b[0] until b[n]= (n-1)
-		}
-		String json = builder.toString();
+//		StringBuilder builder = new StringBuilder();
+//		byte[] b = new byte[4096];
+//		int n = -1;
+//		while ((n = in.read(b)) != -1) {
+//			builder.append(new String(b, 0, n)); // creates a new string from
+//													// b[0] until b[n]= (n-1)
+//		}
+		//this line of code replaces the whole code above
+		String json = IOUtils.toString(in);
 		Gson gson = new Gson();
 
 		Instance nyt = gson.fromJson(json, Instance.class);
@@ -72,22 +77,24 @@ public class NewYorkTimes extends JFrame {
 			model.addElement("\n");
 			model.addElement("Headline: " + array[i].getHeadline().getMain() + "\n");
 			model.addElement("Lead Paragraph: " + array[i].getLead_paragraph() + "\n");
-			model.addElement("Click here for full article:");
+			//model.addElement("Click here for full article:");
 
 			list = new JList<String>(model);
 			list.setBackground(Color.YELLOW);
 			list.setAlignmentX(0);
 			panel.add(list);
-			JButton button = new JButton((array[i].getWeb_url()).toString());
+			JButton button = new JButton("Click here for full article:");
 			button.setBackground(Color.WHITE);
+			
+			//need to make the url final bec you need i at point where button is created
+			final URI uri = array[i].getWeb_url();
 			button.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent event) {
-
-					String text = button.getText();
-					URI url = URI.create(text);
+					//String text = button.getText();
+					//URI url = URI.create(text);
 					try {
-						java.awt.Desktop.getDesktop().browse(url);
+						java.awt.Desktop.getDesktop().browse(uri);
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
@@ -96,11 +103,12 @@ public class NewYorkTimes extends JFrame {
 			});
 
 			panel.add(button);
-			// counter--;
+		
 		}
 
 		panel.setBackground(Color.YELLOW);
-		container.add(panel);
+		JScrollPane listScrollPane = new JScrollPane(panel);
+		container.add(listScrollPane );
 		
 		// JButton button = new JButton("RELOAD");
 		// container.add(button, BorderLayout.WEST);
