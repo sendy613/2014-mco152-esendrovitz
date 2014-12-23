@@ -1,5 +1,6 @@
 package sendrovitz.earthquakes;
 
+import java.awt.Color;
 import java.awt.Container;
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,13 +9,15 @@ import java.net.URL;
 import java.net.URLConnection;
 
 import javax.swing.JFrame;
+import javax.swing.JList;
 
+import sendrovitz.weather.WeatherFrame;
 import sendrovitz.weather.WeatherNow;
 
 import com.google.gson.Gson;
 
-public class PastEarthquakes {
-
+public class PastEarthquakes extends JFrame{
+public PastEarthquakes() throws IOException{
 	URL url = new URL("http://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_month.geojson");
 	URLConnection connection = url.openConnection();
 	InputStream in = connection.getInputStream();
@@ -44,14 +47,38 @@ public class PastEarthquakes {
 //		builder.append("\n");
 //	}
 //	System.out.println(builder.toString());
-	setSize(450, 200);
-	setTitle("Current Weather");
+	setSize(600, 600);
+	setTitle("Past Earthquakes");
 	// this is only if your application has one window
 	setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 	// puts window into center
 	setLocationRelativeTo(null);
 
 	Container container = getContentPane();
+	Feature[] array = q.getFeatures();
+	String[] array2 = new String[array.length*3];
+	int counter =0;
+	for(int i=0; i<array.length; i++){
+		array2[counter++]=array[i].getProperties().getPlace();
+		array2[counter++] = ("MAG: "+(array[i].getProperties().getMag()).toString());
+		array2[counter++] = ("\n");
+	}
+	JList list = new JList(array2);
+	list.setBackground(Color.ORANGE);
+	container.add(list);
+	
+	
+}
+public static void main(String args[]) {
+	PastEarthquakes quake;
+	try {
+		quake = new PastEarthquakes();
+		quake.setVisible(true);
+	} catch (IOException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+
 }
 
 }
