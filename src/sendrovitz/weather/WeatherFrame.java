@@ -29,17 +29,18 @@ import sendrovitz.gui.WeatherGUI;
 public class WeatherFrame extends JFrame {
 	private JLabel city;
 	private JLabel imageLabel;
-	//private Image image;
 	private Weather[] weather;
 	private JLabel temp;
 	private JLabel minTemp;
 	private JLabel maxTemp;
+	private JLabel desc;
 	private Container container;
 	private Container northContainer;
 	private JPanel panel;
 	private JPanel panel2;
+	private Weather[] array;
+	private StringBuilder builder;
 
-	//
 	public WeatherFrame() throws IOException {
 
 		setSize(450, 200);
@@ -50,11 +51,9 @@ public class WeatherFrame extends JFrame {
 		setLocationRelativeTo(null);
 
 		// sets layout manager of window
-		BorderLayout layout = new BorderLayout();
 		city = new JLabel();
-
-		container.setLayout(layout);
 		container = getContentPane();
+		container.setLayout(new BorderLayout());
 		container.setBackground(Color.GREEN);
 
 		northContainer = new Container();
@@ -90,8 +89,16 @@ public class WeatherFrame extends JFrame {
 		imageLabel = new JLabel();
 		imageLabel.setBackground(Color.GREEN);
 		imageLabel.setOpaque(true);
+		panel.add(panel2, BorderLayout.SOUTH);
 		container.add(imageLabel, BorderLayout.CENTER);
+
+		builder = new StringBuilder();
+		desc = new JLabel();
+		panel2.add(desc);
 		container.add(panel, BorderLayout.SOUTH);
+
+		WeatherDownloadThread thread = new WeatherDownloadThread(this);
+		thread.start();
 
 		/*
 		 * // jLabel displays info (cannot interact w it) Container
@@ -146,9 +153,6 @@ public class WeatherFrame extends JFrame {
 		 * not west, east, south, north
 		 */
 
-		WeatherDownloadThread thread = new WeatherDownloadThread(this);
-		
-		thread.start();
 	}
 
 	public void displayWeather(WeatherNow now) throws IOException {
@@ -159,14 +163,19 @@ public class WeatherFrame extends JFrame {
 		String urlString = ("http://openweathermap.org/img/w/" + icon + "" + ".png");
 		URL url;
 		url = new URL(urlString);
-		DownloadImageThread imageThread = new DownloadImageThread(url,imageLabel);
-		imageThread.run();
+		DownloadImageThread imageThread = new DownloadImageThread(url, imageLabel);
+		imageThread.start();
+
 		temp.setText("Temp: " + Double.toString(now.getMain().getTemp()) + " degrees");
-
 		maxTemp.setText("Max temp: " + Double.toString(now.getMain().getTempMax()) + " degrees");
-
 		minTemp.setText("Min temp: " + Double.toString(now.getMain().getTempMin()) + " degrees");
+		array = now.getWeather();
 
+		// get it in constructor
+		for (int i = 0; i < array.length; i++) {
+			builder.append(array[i].getDescription() + " ");
+		}
+		desc.setText(builder.toString());
 	}
 
 	public static void main(String args[]) {
