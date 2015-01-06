@@ -152,3 +152,8 @@ public class NewYorkTimes extends JFrame {
 	}
 
 }
+
+//space in json variable name:
+//@SerializedName("complete streets")
+
+//private Complete completestreets;

@@ -39,14 +39,7 @@ public PastEarthquakes() throws IOException{
 	Earthquake q = gson.fromJson(json, Earthquake.class); // gives us back
 															// a weatherNo
 															// object
-//	Feature[] array = q.getFeatures();
-//	for(int i=0; i<array.length; i++){
-//		builder.append(array[i].getProperties().getPlace());
-//		builder.append(" ");
-//		builder.append(array[i].getProperties().getMag());
-//		builder.append("\n");
-//	}
-//	System.out.println(builder.toString());
+
 	setSize(600, 600);
 	setTitle("Past Earthquakes");
 	// this is only if your application has one window
