@@ -10,13 +10,23 @@ public class MineButton extends JButton {
 	private boolean visited;
 	private Integer numSurroundingMines;
 	private boolean hasFlag;
+	private boolean wasCounted;
 
 	public MineButton() {
 		this.visited = false;
 		this.numSurroundingMines = 0;
-		this.buttonText = "";
+		//this.buttonText = "";
 		this.hasFlag = false;
+		this.wasCounted=false;
 
+	}
+
+	public boolean isWasCounted() {
+		return wasCounted;
+	}
+
+	public void setWasCounted(boolean wasCounted) {
+		this.wasCounted = wasCounted;
 	}
 
 	public boolean isHasFlag() {

@@ -21,9 +21,8 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 import javax.swing.border.Border;
-
-import sendrovitz.weather.DownloadImageThread;
 
 public class Mine extends JFrame {
 	private final int ROWS = 10;
@@ -39,14 +38,10 @@ public class Mine extends JFrame {
 	private JButton reload;
 	private JLabel imageLabel;
 	private Container container;
-	private Integer minesLeft;
-
 	private MineButton mineField[][];
 	private Stack<MineButton> cells;
 
-	private boolean gameStatus;
-
-	public Mine()  {
+	public Mine() {
 		setSize(800, 600);
 		setTitle("Minesweeper");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -60,17 +55,86 @@ public class Mine extends JFrame {
 		this.endGame = new JPanel();
 		endGame.setLayout(new BorderLayout());
 		this.gameOver = new JLabel("GAME OVER");
-		this.numOfMines =0;
+		this.numOfMines = 0;
 		mineField = new MineButton[ROWS][COLUMNS];
 		cells = new Stack<MineButton>();
+		MouseAdapter listener = new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+
+				MineButton button = (MineButton) e.getComponent();
+				boolean m = button.getHasMine();
+
+				if (SwingUtilities.isLeftMouseButton(e) && button.isVisited() == false) {
+					if (m == true) {
+						// ////?????????????
+						for (int i = 0; i < ROWS; i++) {
+							for (int j = 0; j < COLUMNS; j++) {
+								// if button has mine
+								if (mineField[i][j].getHasMine()) {
+									String urlString = ("http://www.rw-designer.com/icon-view/3078.png");
+									URL url;
+									try {
+										url = new URL(urlString);
+										DownloadImageThread imageThread = new DownloadImageThread(url, button);
+										imageThread.start();
+										button.add(imageLabel);
+									} catch (MalformedURLException e1) {
+										// TODO Auto-generated catch block
+										e1.printStackTrace();
+									}
+								} else {
+									//???????????????????????
+									String text = mineField[i][j].getButtonText().toString();
+									mineField[i][j].setButtonText(text);
+								}
+							}
+						}
+
+					}
+					if (m == false) {
+						getSurroundingCells(button);
+						button.setVisited(true);
+					}
+
+				} else if (SwingUtilities.isRightMouseButton(e)) {
+					if (button.isHasFlag()) {
+						button.setIcon(null);
+						numOfMines++;
+						remainingMines.setText("Number of remaining mines: " + numOfMines.toString());
+						button.setVisited(false);
+					} else {
+						numOfMines--;
+						remainingMines.setText("Number of remaining mines: " + numOfMines.toString());
+						String urlString = ("http://www.rw-designer.com/icon-view/3079.png");
+						URL url;
+						try {
+							url = new URL(urlString);
+							DownloadImageThread imageThread = new DownloadImageThread(url, button);
+							imageThread.start();
+							// button.add(imageLabel);
+							button.setHasFlag(true);
+							button.setVisited(true);
+						} catch (MalformedURLException e1) {
+							// TODO Auto-generated catch block
+							e1.printStackTrace();
+						}
+
+					}
+				} else if (e.getButton() == 3 && e.getButton() == 1) {
+					// expose all surrounding cells if all surrounding bombs are
+					// marked
+				}
+			}
+		};
 
 		for (int i = 0; i < ROWS; i++) {
 			for (int j = 0; j < COLUMNS; j++) {
 				mineField[i][j] = new MineButton();
 				mineField[i][j].setRow(i);
 				mineField[i][j].setCol(j);
+				mineField[i][j].addMouseListener(listener);
 
-				mineField[i][j].addMouseListener(new Mouse());
 				panel.add(mineField[i][j]);
 				setMines(mineField[i][j]);
 			}
@@ -78,25 +142,25 @@ public class Mine extends JFrame {
 		this.statusBar = new JPanel();
 		statusBar.setLayout(new BoxLayout(statusBar, BoxLayout.LINE_AXIS));
 		this.remainingMines = new JLabel("Number of remaining mines: " + numOfMines.toString());
-		Border paddingBorder = BorderFactory.createEmptyBorder(10,10,10,10);
+		Border paddingBorder = BorderFactory.createEmptyBorder(10, 10, 10, 10);
 		Border border = BorderFactory.createLineBorder(Color.BLUE);
-		remainingMines.setBorder(BorderFactory.createCompoundBorder(border,paddingBorder));
+		remainingMines.setBorder(BorderFactory.createCompoundBorder(border, paddingBorder));
 		statusBar.add(remainingMines);
 		this.reload = new JButton("RESTART");
-		reload.setBorder(BorderFactory.createCompoundBorder(border,paddingBorder));
-		this.reload.addActionListener(new ActionListener(){
-		@Override
-		 public void actionPerformed(ActionEvent event) {
-		Mine.main(null);
-		}
+		reload.setBorder(BorderFactory.createCompoundBorder(border, paddingBorder));
+		this.reload.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent event) {
+				Mine.main(null);
+			}
 		});
-	
+
 		statusBar.add(reload);
 		board.add(statusBar, BorderLayout.NORTH);
 		board.add(panel, BorderLayout.CENTER);
-		container.add(board);
+		container.add(board, BorderLayout.CENTER);
 		imageLabel = new JLabel();
-		this.gameStatus = true;
+
 	}
 
 	public void setMines(MineButton button) {
@@ -121,109 +185,83 @@ public class Mine extends JFrame {
 		if (r != 0) {
 			temp.setRow(r - 1);
 			temp.setCol(c);
-			temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
-			temp.setButtonText(temp.getNumSurroundingMines().toString());
-			
+			if (!temp.isWasCounted()) {
+				temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
+				temp.setButtonText(temp.getNumSurroundingMines().toString());
+				temp.setWasCounted(true);
+			}
+
 		}
 		// down
 		if (r != ROWS) {
 			temp.setRow(r + 1);
 			temp.setCol(c);
-			temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
-			temp.setButtonText(temp.getNumSurroundingMines().toString());
+			if (!temp.isWasCounted()) {
+				temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
+				temp.setButtonText(temp.getNumSurroundingMines().toString());
+				temp.setWasCounted(true);
+			}
 		}
 		// right
 		if (c != COLUMNS) {
 			temp.setRow(r);
 			temp.setCol(c + 1);
-			temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
-			temp.setButtonText(temp.getNumSurroundingMines().toString());
+			if (!temp.isWasCounted()) {
+				temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
+				temp.setButtonText(temp.getNumSurroundingMines().toString());
+				temp.setWasCounted(true);
+			}
 		}
 		// left
 		if (c != 0) {
 			temp.setRow(r);
 			temp.setCol(c - 1);
-			temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
-			temp.setButtonText(temp.getNumSurroundingMines().toString());
+			if (!temp.isWasCounted()) {
+				temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
+				temp.setButtonText(temp.getNumSurroundingMines().toString());
+				temp.setWasCounted(true);
+			}
 		}
 		// up-right
 		if (r != 0 && c != COLUMNS) {
 			temp.setRow(r - 1);
 			temp.setCol(c + 1);
-			temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
-			temp.setButtonText(temp.getNumSurroundingMines().toString());
+			if (!temp.isWasCounted()) {
+				temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
+				temp.setButtonText(temp.getNumSurroundingMines().toString());
+				temp.setWasCounted(true);
+			}
 		}
 		// up-left
 		if (r != 0 && c != 0) {
 			temp.setRow(r - 1);
 			temp.setCol(c - 1);
-			temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
-			temp.setButtonText(temp.getNumSurroundingMines().toString());
+			if (!temp.isWasCounted()) {
+				temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
+				temp.setButtonText(temp.getNumSurroundingMines().toString());
+				temp.setWasCounted(true);
+			}
 		}
 		// down-right
 		if (r != ROWS && c != COLUMNS) {
 			temp.setRow(r + 1);
 			temp.setCol(c + 1);
-			temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
-			temp.setButtonText(temp.getNumSurroundingMines().toString());
+			if (!temp.isWasCounted()) {
+				temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
+				temp.setButtonText(temp.getNumSurroundingMines().toString());
+				temp.setWasCounted(true);
+			}
 		}
 		// down-left
 		if (r != ROWS && c != 0) {
 			temp.setRow(r + 1);
 			temp.setCol(c - 11);
-			temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
-			temp.setButtonText(temp.getNumSurroundingMines().toString());
-		}
-	}
-
-	private class Mouse extends MouseAdapter {
-		public void mouseClicked(MouseEvent e) {
-
-			MineButton button = (MineButton) e.getComponent();
-			boolean m = button.getHasMine();
-
-			if (e.getButton() == 1 && button.isVisited() == false) {
-				if (m == true) {
-					button.setText("*");
-					gameStatus = false;
-					endGame.add(gameOver, BorderLayout.CENTER);
-					board.add(endGame, BorderLayout.CENTER);
-					container.add(board, BorderLayout.CENTER);
-					board.revalidate();
-					// end game;
-				}
-				if (m == false) {
-					getSurroundingCells(button);
-					
-					button.setVisited(true);
-				}
-
-			} else if (e.getButton() == 3) {
-				if (button.getHasMine()) {
-					button.setIcon(null);
-					//button.setText("");
-				} else {
-					numOfMines--;
-					remainingMines.setText("Number of remaining mines: " + numOfMines.toString());
-					String urlString = ("http://www.rw-designer.com/icon-view/3079.png");
-					URL url;
-					try {
-						url = new URL(urlString);
-						DownloadImageThread imageThread = new DownloadImageThread(url, imageLabel);
-						imageThread.start();
-						button.add(imageLabel);
-						button.setHasFlag(true);
-					} catch (MalformedURLException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
-				
-				}
-			}else if(e.getButton()==3 && e.getButton()==1){
-				//expose all surrounding cells if all surrounding bombs are marked
+			if (!temp.isWasCounted()) {
+				temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
+				temp.setButtonText(temp.getNumSurroundingMines().toString());
+				temp.setWasCounted(true);
 			}
 		}
-
 	}
 
 	public void getSurroundingCells(MineButton button) {
@@ -233,8 +271,17 @@ public class Mine extends JFrame {
 		// get everything off stack and set Text of button
 		while (!cells.isEmpty()) {
 			temp = cells.pop();
-			String text = temp.getButtonText();
-			temp.setText(text);
+			int r = temp.getRow();
+			int c = temp.getCol();
+			for (int i = 0; i < ROWS; i++) {
+				for (int j = 0; j < COLUMNS; j++) {
+					if (r == i && c == j) {
+						mineField[i][j].setText(mineField[i][j].getButtonText());
+					}
+				}
+			}
+			// String text = temp.getButtonText();
+			// temp.setText(text);
 
 		}
 	}
@@ -254,7 +301,6 @@ public class Mine extends JFrame {
 		while (tempButton.getCol() != COLUMNS && tempButton != null) {
 			if (!tempButton.isVisited()) {
 				if (tempButton.getHasMine() == true) {
-					
 					break;
 				} else {
 					cells.push(tempButton);
@@ -350,16 +396,11 @@ public class Mine extends JFrame {
 		return button;
 
 	}
-	
-	
-
 
 	public static void main(String[] args) {
 		JFrame frame;
-		
-			frame = new Mine();
-			frame.setVisible(true);
-	
-		
+		frame = new Mine();
+		frame.setVisible(true);
+
 	}
 }
