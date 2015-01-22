@@ -3,6 +3,7 @@ package sendrovitz.minesweeper;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Container;
+import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -17,6 +18,7 @@ import java.util.Stack;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -28,6 +30,7 @@ public class Mine extends JFrame {
 	private final int ROWS = 10;
 	private final int COLUMNS = 10;
 	private Integer numOfMines;
+	private Integer begNumMines;
 	private int number;
 	private JPanel board;
 	private JPanel statusBar;
@@ -36,10 +39,11 @@ public class Mine extends JFrame {
 	private JLabel gameOver;
 	private JPanel panel;
 	private JButton reload;
-	private JLabel imageLabel;
 	private Container container;
 	private MineButton mineField[][];
-	private Stack<MineButton> cells;
+	private ImageIcon mineImage;
+	private ImageIcon flagImage;
+	private MouseAdapter listener;
 
 	public Mine() {
 		setSize(800, 600);
@@ -51,14 +55,21 @@ public class Mine extends JFrame {
 		board = new JPanel();
 		board.setLayout(new BorderLayout());
 		this.panel = new JPanel();
-		this.panel.setLayout(new GridLayout(10, 10));
+		this.panel.setLayout(new GridLayout(ROWS, COLUMNS));
 		this.endGame = new JPanel();
-		endGame.setLayout(new BorderLayout());
+		endGame.setLayout(new FlowLayout());
 		this.gameOver = new JLabel("GAME OVER");
-		this.numOfMines = 0;
+		gameOver.setBackground(Color.RED);
+		Border endPaddingBorder = BorderFactory.createEmptyBorder(15, 15, 15, 15);
+		Border endBorder = BorderFactory.createLineBorder(Color.RED);
+		gameOver.setBorder(BorderFactory.createCompoundBorder(endBorder, endPaddingBorder));
+		endGame.add(gameOver);
+		this.begNumMines = 0;
 		mineField = new MineButton[ROWS][COLUMNS];
-		cells = new Stack<MineButton>();
-		MouseAdapter listener = new MouseAdapter() {
+		flagImage = new ImageIcon("./smallFlag.png");
+		mineImage = new ImageIcon("./smallMine.png");
+
+		listener = new MouseAdapter() {
 			@Override
 			public void mouseClicked(MouseEvent e) {
 
@@ -67,34 +78,24 @@ public class Mine extends JFrame {
 
 				if (SwingUtilities.isLeftMouseButton(e) && button.isVisited() == false) {
 					if (m == true) {
-						// ////?????????????
 						for (int i = 0; i < ROWS; i++) {
 							for (int j = 0; j < COLUMNS; j++) {
 								// if button has mine
 								if (mineField[i][j].getHasMine()) {
-									String urlString = ("http://www.rw-designer.com/icon-view/3078.png");
-									URL url;
-									try {
-										url = new URL(urlString);
-										DownloadImageThread imageThread = new DownloadImageThread(url, button);
-										imageThread.start();
-										button.add(imageLabel);
-									} catch (MalformedURLException e1) {
-										// TODO Auto-generated catch block
-										e1.printStackTrace();
-									}
+									mineField[i][j].setIcon(mineImage);
 								} else {
-									//???????????????????????
-									String text = mineField[i][j].getButtonText().toString();
-									mineField[i][j].setButtonText(text);
+									mineField[i][j].setVisited(true);
+									//mineField[i][j].removeMouseListener(listener);
 								}
 							}
 						}
+						endGame(false);
 
 					}
 					if (m == false) {
 						getSurroundingCells(button);
 						button.setVisited(true);
+						checkIfWon();
 					}
 
 				} else if (SwingUtilities.isRightMouseButton(e)) {
@@ -102,24 +103,12 @@ public class Mine extends JFrame {
 						button.setIcon(null);
 						numOfMines++;
 						remainingMines.setText("Number of remaining mines: " + numOfMines.toString());
-						button.setVisited(false);
-					} else {
+					} else if (numOfMines.compareTo(0) < 0 || numOfMines.compareTo(0) > 0) {
 						numOfMines--;
 						remainingMines.setText("Number of remaining mines: " + numOfMines.toString());
-						String urlString = ("http://www.rw-designer.com/icon-view/3079.png");
-						URL url;
-						try {
-							url = new URL(urlString);
-							DownloadImageThread imageThread = new DownloadImageThread(url, button);
-							imageThread.start();
-							// button.add(imageLabel);
-							button.setHasFlag(true);
-							button.setVisited(true);
-						} catch (MalformedURLException e1) {
-							// TODO Auto-generated catch block
-							e1.printStackTrace();
-						}
-
+						button.setIcon(flagImage);
+						button.setHasFlag(true);
+						checkIfWonFlag();
 					}
 				} else if (e.getButton() == 3 && e.getButton() == 1) {
 					// expose all surrounding cells if all surrounding bombs are
@@ -134,14 +123,14 @@ public class Mine extends JFrame {
 				mineField[i][j].setRow(i);
 				mineField[i][j].setCol(j);
 				mineField[i][j].addMouseListener(listener);
-
 				panel.add(mineField[i][j]);
 				setMines(mineField[i][j]);
 			}
 		}
+		this.numOfMines = begNumMines;
 		this.statusBar = new JPanel();
 		statusBar.setLayout(new BoxLayout(statusBar, BoxLayout.LINE_AXIS));
-		this.remainingMines = new JLabel("Number of remaining mines: " + numOfMines.toString());
+		this.remainingMines = new JLabel("Number of remaining mines: " + begNumMines.toString());
 		Border paddingBorder = BorderFactory.createEmptyBorder(10, 10, 10, 10);
 		Border border = BorderFactory.createLineBorder(Color.BLUE);
 		remainingMines.setBorder(BorderFactory.createCompoundBorder(border, paddingBorder));
@@ -159,7 +148,6 @@ public class Mine extends JFrame {
 		board.add(statusBar, BorderLayout.NORTH);
 		board.add(panel, BorderLayout.CENTER);
 		container.add(board, BorderLayout.CENTER);
-		imageLabel = new JLabel();
 
 	}
 
@@ -167,233 +155,142 @@ public class Mine extends JFrame {
 		Random random = new Random();
 		number = random.nextInt(100);
 
-		if (number >= 70) {
+		if (number >= 80) {
 			button.setHasMine(true);
-			setNumbers(button);
-			numOfMines++;
+			begNumMines++;
 		} else {
 			button.setHasMine(false);
 		}
 
 	}
 
-	public void setNumbers(MineButton button) {
-		MineButton temp = findButton(button.getRow(), button.getCol());
-		int r = temp.getRow();
-		int c = temp.getCol();
-		// up
-		if (r != 0) {
-			temp.setRow(r - 1);
-			temp.setCol(c);
-			if (!temp.isWasCounted()) {
-				temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
-				temp.setButtonText(temp.getNumSurroundingMines().toString());
-				temp.setWasCounted(true);
-			}
-
-		}
-		// down
-		if (r != ROWS) {
-			temp.setRow(r + 1);
-			temp.setCol(c);
-			if (!temp.isWasCounted()) {
-				temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
-				temp.setButtonText(temp.getNumSurroundingMines().toString());
-				temp.setWasCounted(true);
-			}
-		}
-		// right
-		if (c != COLUMNS) {
-			temp.setRow(r);
-			temp.setCol(c + 1);
-			if (!temp.isWasCounted()) {
-				temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
-				temp.setButtonText(temp.getNumSurroundingMines().toString());
-				temp.setWasCounted(true);
-			}
-		}
-		// left
-		if (c != 0) {
-			temp.setRow(r);
-			temp.setCol(c - 1);
-			if (!temp.isWasCounted()) {
-				temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
-				temp.setButtonText(temp.getNumSurroundingMines().toString());
-				temp.setWasCounted(true);
-			}
-		}
-		// up-right
-		if (r != 0 && c != COLUMNS) {
-			temp.setRow(r - 1);
-			temp.setCol(c + 1);
-			if (!temp.isWasCounted()) {
-				temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
-				temp.setButtonText(temp.getNumSurroundingMines().toString());
-				temp.setWasCounted(true);
-			}
-		}
-		// up-left
-		if (r != 0 && c != 0) {
-			temp.setRow(r - 1);
-			temp.setCol(c - 1);
-			if (!temp.isWasCounted()) {
-				temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
-				temp.setButtonText(temp.getNumSurroundingMines().toString());
-				temp.setWasCounted(true);
-			}
-		}
-		// down-right
-		if (r != ROWS && c != COLUMNS) {
-			temp.setRow(r + 1);
-			temp.setCol(c + 1);
-			if (!temp.isWasCounted()) {
-				temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
-				temp.setButtonText(temp.getNumSurroundingMines().toString());
-				temp.setWasCounted(true);
-			}
-		}
-		// down-left
-		if (r != ROWS && c != 0) {
-			temp.setRow(r + 1);
-			temp.setCol(c - 11);
-			if (!temp.isWasCounted()) {
-				temp.setNumSurroundingMines(temp.getNumSurroundingMines() + 1);
-				temp.setButtonText(temp.getNumSurroundingMines().toString());
-				temp.setWasCounted(true);
-			}
-		}
-	}
-
 	public void getSurroundingCells(MineButton button) {
-		cells.push(button);
-		move(button);
-		MineButton temp;
-		// get everything off stack and set Text of button
-		while (!cells.isEmpty()) {
-			temp = cells.pop();
-			int r = temp.getRow();
-			int c = temp.getCol();
-			for (int i = 0; i < ROWS; i++) {
-				for (int j = 0; j < COLUMNS; j++) {
-					if (r == i && c == j) {
-						mineField[i][j].setText(mineField[i][j].getButtonText());
-					}
-				}
-			}
-			// String text = temp.getButtonText();
-			// temp.setText(text);
+		int r = button.getRow();
+		int c = button.getCol();
+		Integer count = 0;
+		if (isOutOfBounds(r, c)) {
+			return;
+		}
+		if (!isOutOfBounds(r, c - 1) && mineField[r][c - 1].getHasMine()) {
+			count++;
+		}
+		if (!isOutOfBounds(r, c + 1) && mineField[r][c + 1].getHasMine()) {
+			count++;
+		}
+		if (!isOutOfBounds(r + 1, c) && mineField[r + 1][c].getHasMine()) {
+			count++;
+		}
+		if (!isOutOfBounds(r - 1, c) && mineField[r - 1][c].getHasMine()) {
+			count++;
+		}
+		if (!isOutOfBounds(r - 1, c - 1) && mineField[r - 1][c - 1].getHasMine()) {
+			count++;
+		}
+		if (!isOutOfBounds(r - 1, c + 1) && mineField[r - 1][c + 1].getHasMine()) {
+			count++;
+		}
+		if (!isOutOfBounds(r + 1, c - 1) && mineField[r + 1][c - 1].getHasMine()) {
+			count++;
+		}
+		if (!isOutOfBounds(r + 1, c + 1) && mineField[r + 1][c + 1].getHasMine()) {
+			count++;
+		}
 
+		// no mines where found. cell is empty so need to check all its
+		// surroundingcells.
+		else if (count.compareTo(0) == 0 && !mineField[r][c].isVisited()) {
+			mineField[r][c].setVisited(true);
+
+			if(!isOutOfBounds(r,c-1)){
+			getSurroundingCells(mineField[r][c - 1]);
+			}
+			if(!isOutOfBounds(r, c+1)){
+			getSurroundingCells(mineField[r][c + 1]);
+			}
+			if(!isOutOfBounds(r+1, c)){
+			getSurroundingCells(mineField[r + 1][c]);
+			}
+			if(!isOutOfBounds(r-1, c)){
+			getSurroundingCells(mineField[r - 1][c]);
+			}
+			if(!isOutOfBounds(r-1, c-1)){
+			getSurroundingCells(mineField[r - 1][c - 1]);
+			}
+			if(!isOutOfBounds(r-1, c+1)){
+			getSurroundingCells(mineField[r - 1][c + 1]);
+			}
+			if(!isOutOfBounds(r+1, c-1)){
+			getSurroundingCells(mineField[r + 1][c - 1]);
+			}
+			if(!isOutOfBounds(r+1, c+1)){
+			getSurroundingCells(mineField[r + 1][c + 1]);
+			}
+		}
+
+		mineField[r][c].setVisited(true);
+		if (count.compareTo(0) < 0 || count.compareTo(0) > 0) {
+			mineField[r][c].setText(count.toString());
 		}
 	}
 
-	public void move(MineButton currentButton) {
-		right(currentButton);
-		left(currentButton);
-		down(currentButton);
-		up(currentButton);
+	public boolean isOutOfBounds(int r, int c) {
+		if (r < 0 || r >= ROWS || c < 0 || c >= COLUMNS) {
+			return true;
+		}
+		return false;
 	}
 
-	public void right(MineButton currentButton) {
-		MineButton tempButton = currentButton;
-		if (tempButton.getCol() != COLUMNS) {
-			tempButton = findButton(currentButton.getRow(), currentButton.getCol() + 1);
-		}
-		while (tempButton.getCol() != COLUMNS && tempButton != null) {
-			if (!tempButton.isVisited()) {
-				if (tempButton.getHasMine() == true) {
-					break;
-				} else {
-					cells.push(tempButton);
-				}
-
-			}
-			tempButton.setVisited(true);
-			if (tempButton.getCol() == COLUMNS - 1) {
-				break;
-			}
-			tempButton = findButton(tempButton.getRow(), tempButton.getCol() + 1);
-		}
-
-	}
-
-	public void left(MineButton currentButton) {
-		MineButton tempButton = currentButton;
-		if (tempButton.getCol() != 0) {
-			tempButton = findButton(currentButton.getRow(), currentButton.getCol() - 1);
-		}
-		while (tempButton.getCol() != 0 && tempButton != null) {
-			if (!tempButton.isVisited()) {
-				if (tempButton.getHasMine() == true) {
-					break;
-				} else {
-					cells.push(tempButton);
-				}
-
-			}
-			tempButton.setVisited(true);
-			if (tempButton.getCol() == 0) {
-				break;
-			}
-			tempButton = findButton(tempButton.getRow(), tempButton.getCol() - 1);
-		}
-	}
-
-	public void up(MineButton currentButton) {
-		MineButton tempButton = currentButton;
-		if (tempButton.getRow() != 0) {
-			tempButton = findButton(currentButton.getRow() - 1, currentButton.getCol());
-		}
-		while (tempButton.getRow() != 0 && tempButton != null) {
-			if (!tempButton.isVisited()) {
-				if (tempButton.getHasMine() == true) {
-					break;
-				} else {
-					cells.push(tempButton);
-				}
-
-			}
-			tempButton.setVisited(true);
-			if (tempButton.getRow() == 0) {
-				break;
-			}
-			tempButton = findButton(tempButton.getRow() - 1, tempButton.getCol());
-		}
-	}
-
-	public void down(MineButton currentButton) {
-		MineButton tempButton = currentButton;
-		if (tempButton.getRow() != ROWS) {
-			tempButton = findButton(currentButton.getRow() + 1, currentButton.getCol());
-		}
-		while (tempButton.getRow() != ROWS && tempButton != null) {
-			if (!tempButton.isVisited()) {
-				if (tempButton.getHasMine() == true) {
-					break;
-				} else {
-					cells.push(tempButton);
-				}
-
-			}
-			tempButton.setVisited(true);
-			if (tempButton.getRow() == ROWS - 1) {
-				break;
-			}
-			tempButton = findButton(tempButton.getRow() + 1, tempButton.getCol());
-		}
-
-	}
-
-	public MineButton findButton(int row, int col) {
-		MineButton button = null;
+	
+	//two ways to win either you flagged all the correct mines (and nothing extra) or you left all the mines covered and clicked everything else
+	public void checkIfWonFlag() {
+		boolean won = false;
+		Integer count = 0;
 		for (int i = 0; i < ROWS; i++) {
 			for (int j = 0; j < COLUMNS; j++) {
-				if (i == row && j == col) {
-					button = mineField[i][j];
-					return button;
+				if (mineField[i][j].isHasFlag() && mineField[i][j].getHasMine()) {
+					count++;
 				}
 			}
 		}
-		return button;
+		if (count.compareTo(begNumMines) == 0) {
+			won = true;
+			gameOver.setText("YOU WON!");
+			gameOver.setOpaque(true);
+			container.add(endGame, BorderLayout.PAGE_START);
+		}
+	}
+
+	public void checkIfWon() {
+		boolean won = false;
+		Integer count = 0;
+		for (int i = 0; i < ROWS; i++) {
+			for (int j = 0; j < COLUMNS; j++) {
+				if (mineField[i][j].isVisited()) {
+					count++;
+				}
+			}
+		}
+		if (count.compareTo((ROWS * COLUMNS) - begNumMines) == 0) {
+			won = true;
+			for (int i = 0; i < ROWS; i++) {
+				for (int j = 0; j < COLUMNS; j++) {
+					if (mineField[i][j].getHasMine()) {
+						mineField[i][j].setIcon(flagImage);
+					}
+
+				}
+
+			}
+			endGame(won);
+		}
+	}
+
+	public void endGame(boolean b) {
+		if (b == true) {
+			gameOver.setText("YOU WON!");
+		}
+		gameOver.setOpaque(true);
+		container.add(endGame, BorderLayout.PAGE_START);
 
 	}
 

@@ -50,6 +50,7 @@ public class MineButton extends JButton {
 	}
 
 	public void setVisited(boolean visited) {
+		setEnabled(!visited);
 		this.visited = visited;
 	}
 
